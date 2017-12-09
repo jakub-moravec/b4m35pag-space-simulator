@@ -1,17 +1,36 @@
-
-
 #include <iostream>
 #include <vector>
 #include <fstream>
 #include <math.h>
 
+#include "gif.h"
+#define DRAW
+enum COLOR_INDEX { RED = 0, GREEN = 1, BLUE = 2, ALPHA = 3 };
+const int background_red = 0;
+const int background_green = 0;
+const int background_blue = 0;
+const int background_alpha = 0;
+const int star_red = 255;
+const int star_green = 255;
+const int star_blue = 255;
+const int star_alpha = 255;
+double _min = -1.8 * 1.3 * 1e18 * 0.5 * exp(-1.8);
+double _max = 1e2 * 1.8 * 1.3 * 1e18 * 0.5 * exp(-1.8);
+const uint32_t star_size = 1;
+const uint32_t width = 500;
+const uint32_t height = 500;
+const uint32_t delay = 1;
+const int image_length = 4 * height * width;
+uint8_t* image = new uint8_t[image_length]();
+
 using namespace std;
 
 const int number_of_parameters = 5;
 const int number_of_iterations = 500;
+const int draw_ratio = 1;
 const double CORRECTION = 1;
 const double G = 6.67408e-11; // gravitational constant
-const double DELTA_T = 1e9; // time quantum
+const double DELTA_T = 1e12; // time quantum
 
 void get_input(int number_of_stars, string file_name, double **stars) {
 
@@ -66,6 +85,45 @@ void proceed_epocha(int number_of_stars, double **stars, double **next_stars) {
     }
 }
 
+void drawSquare(uint8_t* image, const uint32_t radius, const uint32_t xcoor, const uint32_t ycoor)
+{
+    for (uint32_t y = ycoor - radius; y <= ycoor + radius; y++) {
+        for (uint32_t x = xcoor - radius; x <= xcoor + radius; x++) {
+            uint32_t index = 4 * (y * width + x);
+
+            image[index + RED] = background_red;
+            image[index + GREEN] = background_green;
+            image[index + BLUE] = background_blue;
+            image[index + ALPHA] = background_alpha;
+        }
+    }
+}
+
+void drawDot(uint8_t* image, const uint32_t radius, const uint32_t xcoor, const uint32_t ycoor)
+{
+    if (xcoor > 0 && ycoor > 0 && xcoor <= width && ycoor <= height) {
+        uint32_t index = 4 * (ycoor * width + xcoor);
+
+        image[index + RED] = star_red;
+        image[index + GREEN] = star_green;
+        image[index + BLUE] = star_blue;
+        image[index + ALPHA] = star_alpha;
+    }
+}
+
+void drawFrame(GifWriter& gWriter, int number_of_stars, double **stars)
+{
+    drawSquare(image, (width / 2) - 1, width / 2, height / 2);
+
+    for (unsigned i = 0; i < number_of_stars; i++) {
+        double scaled_x_pos = (((stars[i][0] / _max) + 1.0) / 2.0) * width;
+        double scaled_y_pos = (((stars[i][1] / _max) + 1.0) / 2.0) * height;
+
+        drawDot(image, star_size, scaled_x_pos, scaled_y_pos);
+    }
+
+    GifWriteFrame(&gWriter, image, width, height, delay);
+}
 
 int main(int argc, char* argv[]) {
 
@@ -92,12 +150,28 @@ int main(int argc, char* argv[]) {
 
     get_input(number_of_stars, inputFile, stars);
 
+#ifdef DRAW
+    GifWriter gWriter;
+	GifBegin(&gWriter, "10000_a.gif", width, height, delay);
+#endif
+
     for (int k = 0; k < number_of_iterations; ++k) {
         proceed_epocha(number_of_stars, stars, next_stars);
         double **foo_pointer = stars;
         stars = next_stars;
         next_stars = foo_pointer;
+
+        // gif, draw a frame, mozna prehodit na zacatek
+#ifdef DRAW
+        if ( k % draw_ratio == 0) {
+            drawFrame(gWriter, number_of_stars, stars);
+        }
+#endif
     }
+
+#ifdef DRAW
+    GifEnd(&gWriter);
+#endif
 
     return 0;
 };
