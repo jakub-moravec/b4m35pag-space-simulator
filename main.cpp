@@ -26,11 +26,11 @@ uint8_t* image = new uint8_t[image_length]();
 using namespace std;
 
 const int number_of_parameters = 5;
-const int number_of_iterations = 500;
-const int draw_ratio = 1;
+const int number_of_iterations = 3000;
+const int draw_ratio = 5;
 const double CORRECTION = 1;
 const double G = 6.67408e-11; // gravitational constant
-const double DELTA_T = 1e12; // time quantum
+const double DELTA_T = 1e11; // time quantum
 
 void get_input(int number_of_stars, string file_name, double **stars) {
 
