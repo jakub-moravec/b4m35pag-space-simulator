@@ -29,7 +29,7 @@ using namespace std;
 using namespace std::chrono;
 
 const int number_of_parameters = 5;
-const int number_of_iterations = 5000;
+const int number_of_iterations = 1000;
 const int draw_ratio = 5;
 const double G = 6.67408e-11; // gravitational constant
 const double DELTA_T = 1e9; // time quantum
@@ -73,15 +73,24 @@ void linear_move(double *next, double origin, double parameter, double delta) {
 
 void proceed_epocha(int number_of_stars, double **stars, double **next_stars) {
 
-    double net_force_x = 0;
-    double net_force_y = 0;
-#pragma omp simd reduction (+: net_force_x, net_force_y)
-    for (int i = 0; i < number_of_stars; i++) {
 
+
+#pragma omp paralel for schedule(guided)
+    for (int i = 0; i < number_of_stars; i++) {
+        double net_force_x = 0;
+        double net_force_y = 0;
         for (int j = 0; j < number_of_stars; j++) {
 
             if (i != j) {
-                calculate_forces(&net_force_x, &net_force_y, stars, i, j);
+                double delta_x = stars[j][0] - stars[i][0];
+                double delta_y = stars[j][1] - stars[i][1];
+
+                double distance = sqrt((delta_x * delta_x) + (delta_y * delta_y));
+
+                double force = (G * stars[i][2] * stars[j][2]) / (distance * distance);
+
+                net_force_x += (force * delta_x) / distance;
+                net_force_y += (force * delta_y) / distance;
             }
         }
 
@@ -170,7 +179,9 @@ int main(int argc, char* argv[]) {
     high_resolution_clock::time_point start = high_resolution_clock::now();
 
     for (int k = 0; k < number_of_iterations; ++k) {
+        cout<<"vypis\n";
         proceed_epocha(number_of_stars, stars, next_stars);
+        cout<<"vypis2\n";
         double **foo_pointer = stars;
         stars = next_stars;
         next_stars = foo_pointer;
