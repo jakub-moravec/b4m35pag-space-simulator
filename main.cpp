@@ -52,38 +52,48 @@ void get_input(int number_of_stars, string file_name, double **stars) {
     }
 }
 
+#pragma omp declare simd
+void calculate_forces(double *net_force_x, double *net_force_y, double **stars, int i, int j) {
+    double delta_x = stars[j][0] - stars[i][0];
+    double delta_y = stars[j][1] - stars[i][1];
+
+    double distance = sqrt((delta_x * delta_x) + (delta_y * delta_y));
+
+    double force = (G * stars[i][2] * stars[j][2]) / (distance * distance);
+
+    *net_force_x += (force * delta_x) / distance;
+    *net_force_y += (force * delta_y) / distance;
+
+}
+
+#pragma omp declare simd
+void linear_move(double *next, double origin, double parameter, double delta) {
+    *next = origin + parameter * delta;
+}
+
 void proceed_epocha(int number_of_stars, double **stars, double **next_stars) {
+
+    double net_force_x = 0;
+    double net_force_y = 0;
+#pragma omp simd reduction (+: net_force_x, net_force_y)
     for (int i = 0; i < number_of_stars; i++) {
 
-        double net_force_x = 0;
-        double net_force_y = 0;
-
-        double star_mass = stars[i][2];
-
         for (int j = 0; j < number_of_stars; j++) {
+
             if (i != j) {
-                double delta_x = stars[j][0] - stars[i][0];
-                double delta_y = stars[j][1] - stars[i][1];
-
-                // TODO method and pragma
-                double distance = sqrt((delta_x * delta_x) + (delta_y * delta_y));
-
-                double force = (G * star_mass * stars[j][2]) / (distance * distance);
-
-                net_force_x += (force * delta_x) / distance;
-                net_force_y += (force * delta_y) / distance;
+                calculate_forces(&net_force_x, &net_force_y, stars, i, j);
             }
         }
 
-        double acceleration_x = net_force_x / star_mass;
-        double acceleration_y = net_force_y / star_mass;
+        double acceleration_x = net_force_x / stars[i][2];
+        double acceleration_y = net_force_y / stars[i][2];
 
-        next_stars[i][3] = stars[i][3] + DELTA_T * acceleration_x;
-        next_stars[i][4] = stars[i][4] + DELTA_T * acceleration_y;
+        linear_move(&next_stars[i][4], stars[i][4], DELTA_T, acceleration_y);
+        linear_move(&next_stars[i][3], stars[i][3], DELTA_T, acceleration_x);
+        linear_move(&next_stars[i][0], stars[i][0], DELTA_T, next_stars[i][3]);
+        linear_move(&next_stars[i][1], stars[i][1], DELTA_T, next_stars[i][4]);
 
-        next_stars[i][0] = stars[i][0] + DELTA_T * next_stars[i][3];
-        next_stars[i][1] = stars[i][1] + DELTA_T * next_stars[i][4];
-        next_stars[i][2] = star_mass;
+        next_stars[i][2] = stars[i][2];
     }
 }
 
