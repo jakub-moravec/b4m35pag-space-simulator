@@ -2,9 +2,12 @@
 #include <vector>
 #include <fstream>
 #include <math.h>
-
 #include "gif.h"
-#define DRAW
+
+#include <ctime>
+#include <chrono>
+
+//#define DRAW
 enum COLOR_INDEX { RED = 0, GREEN = 1, BLUE = 2, ALPHA = 3 };
 const int background_red = 0;
 const int background_green = 0;
@@ -24,13 +27,13 @@ const int image_length = 4 * height * width;
 uint8_t* image = new uint8_t[image_length]();
 
 using namespace std;
+using namespace std::chrono;
 
 const int number_of_parameters = 5;
-const int number_of_iterations = 3000;
+const int number_of_iterations = 5000;
 const int draw_ratio = 5;
-const double CORRECTION = 1;
 const double G = 6.67408e-11; // gravitational constant
-const double DELTA_T = 1e11; // time quantum
+const double DELTA_T = 1e9; // time quantum
 
 void get_input(int number_of_stars, string file_name, double **stars) {
 
@@ -66,7 +69,7 @@ void proceed_epocha(int number_of_stars, double **stars, double **next_stars) {
                 // TODO method and pragma
                 double distance = sqrt((delta_x * delta_x) + (delta_y * delta_y));
 
-                double force = (CORRECTION * G * star_mass * stars[j][2]) / (distance * distance);
+                double force = (G * star_mass * stars[j][2]) / (distance * distance);
 
                 net_force_x += (force * delta_x) / distance;
                 net_force_y += (force * delta_y) / distance;
@@ -155,6 +158,8 @@ int main(int argc, char* argv[]) {
 	GifBegin(&gWriter, "10000_a.gif", width, height, delay);
 #endif
 
+    high_resolution_clock::time_point start = high_resolution_clock::now();
+
     for (int k = 0; k < number_of_iterations; ++k) {
         proceed_epocha(number_of_stars, stars, next_stars);
         double **foo_pointer = stars;
@@ -169,9 +174,13 @@ int main(int argc, char* argv[]) {
 #endif
     }
 
+    double totalTime = duration_cast<duration<double>>(high_resolution_clock::now() - start).count();
+
 #ifdef DRAW
     GifEnd(&gWriter);
 #endif
+
+    cout << totalTime;
 
     return 0;
 };
