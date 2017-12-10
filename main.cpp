@@ -4,7 +4,6 @@
 #include <math.h>
 #include "gif.h"
 
-#include <ctime>
 #include <chrono>
 
 // #define DRAW
@@ -155,7 +154,7 @@ int main(int argc, char* argv[]) {
 
 #ifdef DRAW
     GifWriter gWriter;
-	GifBegin(&gWriter, "10000_a.gif", width, height, delay);
+	GifBegin(&gWriter, "output.gif", width, height, delay);
 #endif
 
     high_resolution_clock::time_point start = high_resolution_clock::now();
