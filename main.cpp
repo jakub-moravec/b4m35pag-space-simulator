@@ -7,7 +7,7 @@
 #include <ctime>
 #include <chrono>
 
-//#define DRAW
+// #define DRAW
 enum COLOR_INDEX { RED = 0, GREEN = 1, BLUE = 2, ALPHA = 3 };
 const int background_red = 0;
 const int background_green = 0;
