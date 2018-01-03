@@ -3,7 +3,7 @@ project(stars)
 
 set(CMAKE_CXX_STANDARD 11)
 
-set(SOURCE_FILES main.cpp main.h gif.h )
+set(SOURCE_FILES main.cpp)
 
 SET(CMAKE_CXX_FLAGS "-march=native -Ofast -fopenmp -fopt-info-vec")
 #SET(CMAKE_CXX_FLAGS "-march=native -Ofast -fopt-info-vec")
