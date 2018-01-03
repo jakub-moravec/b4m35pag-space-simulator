@@ -6,7 +6,7 @@
 
 #include <chrono>
 
-// #define DRAW
+#define DRAW
 enum COLOR_INDEX { RED = 0, GREEN = 1, BLUE = 2, ALPHA = 3 };
 const int background_red = 0;
 const int background_green = 0;
@@ -16,8 +16,7 @@ const int star_red = 255;
 const int star_green = 255;
 const int star_blue = 255;
 const int star_alpha = 255;
-double _min = -1.8 * 1.3 * 1e18 * 0.5 * exp(-1.8);
-double _max = 1e2 * 1.8 * 1.3 * 1e18 * 0.5 * exp(-1.8);
+double _max = 1e18;
 const uint32_t star_size = 1;
 const uint32_t width = 500;
 const uint32_t height = 500;
@@ -29,10 +28,10 @@ using namespace std;
 using namespace std::chrono;
 
 const int number_of_parameters = 5;
-const int number_of_iterations = 1000;
-const int draw_ratio = 5;
+const int number_of_iterations = 10000;
+const int draw_ratio = 100;
 const double G = 6.67408e-11; // gravitational constant
-const double DELTA_T = 1e9; // time quantum
+const double DELTA_T = 2e5; // time quantum
 
 void get_input(int number_of_stars, string file_name, double **stars) {
 
@@ -45,11 +44,23 @@ void get_input(int number_of_stars, string file_name, double **stars) {
     }
 
     //keep storing values from the text file so long as data exists:
+    double max = 0;
     for (int i = 0; i < number_of_stars; ++i) {
         ifile >> stars[i][0];
         ifile >> stars[i][1];
         ifile >> stars[i][2];
+        //initial velocity
+        stars[i][3] = stars[i][1] / 1e9;
+        stars[i][4] = - stars[i][0] / 1e9;
+        if(stars[i][0] > max){
+            max = stars[i][0];
+        }
+        if(stars[i][1] > max){
+            max = stars[i][1];
+        }
     }
+
+    _max = max * 1.5;
 }
 
 #pragma omp declare simd
@@ -71,11 +82,13 @@ void linear_move(double *next, double origin, double parameter, double delta) {
     *next = origin + parameter * delta;
 }
 
+#pragma omp declare simd
+void acceleration_move(double *next, double origin, double delta, double acceleration) {
+    *next = origin + acceleration * delta * delta / 2;
+}
+
 void proceed_epocha(int number_of_stars, double **stars, double **next_stars) {
-
-
-
-#pragma omp paralel for schedule(guided)
+#pragma omp parallel for simd schedule(guided)
     for (int i = 0; i < number_of_stars; i++) {
         double net_force_x = 0;
         double net_force_y = 0;
@@ -97,8 +110,8 @@ void proceed_epocha(int number_of_stars, double **stars, double **next_stars) {
         double acceleration_x = net_force_x / stars[i][2];
         double acceleration_y = net_force_y / stars[i][2];
 
-        linear_move(&next_stars[i][4], stars[i][4], DELTA_T, acceleration_y);
-        linear_move(&next_stars[i][3], stars[i][3], DELTA_T, acceleration_x);
+        acceleration_move(&next_stars[i][4], stars[i][4], DELTA_T, acceleration_y);
+        acceleration_move(&next_stars[i][3], stars[i][3], DELTA_T, acceleration_x);
         linear_move(&next_stars[i][0], stars[i][0], DELTA_T, next_stars[i][3]);
         linear_move(&next_stars[i][1], stars[i][1], DELTA_T, next_stars[i][4]);
 
@@ -179,9 +192,7 @@ int main(int argc, char* argv[]) {
     high_resolution_clock::time_point start = high_resolution_clock::now();
 
     for (int k = 0; k < number_of_iterations; ++k) {
-        cout<<"vypis\n";
         proceed_epocha(number_of_stars, stars, next_stars);
-        cout<<"vypis2\n";
         double **foo_pointer = stars;
         stars = next_stars;
         next_stars = foo_pointer;
