@@ -6,7 +6,7 @@
 
 #include <chrono>
 
-#define DRAW
+//#define DRAW
 enum COLOR_INDEX { RED = 0, GREEN = 1, BLUE = 2, ALPHA = 3 };
 const int background_red = 0;
 const int background_green = 0;
@@ -28,7 +28,7 @@ using namespace std;
 using namespace std::chrono;
 
 const int number_of_parameters = 5;
-const int number_of_iterations = 10000;
+const int number_of_iterations = 500;
 const int draw_ratio = 100;
 const double G = 6.67408e-11; // gravitational constant
 const double DELTA_T = 2e5; // time quantum
@@ -64,20 +64,6 @@ void get_input(int number_of_stars, string file_name, double **stars) {
 }
 
 #pragma omp declare simd
-void calculate_forces(double *net_force_x, double *net_force_y, double **stars, int i, int j) {
-    double delta_x = stars[j][0] - stars[i][0];
-    double delta_y = stars[j][1] - stars[i][1];
-
-    double distance = sqrt((delta_x * delta_x) + (delta_y * delta_y));
-
-    double force = (G * stars[i][2] * stars[j][2]) / (distance * distance);
-
-    *net_force_x += (force * delta_x) / distance;
-    *net_force_y += (force * delta_y) / distance;
-
-}
-
-#pragma omp declare simd
 void linear_move(double *next, double origin, double parameter, double delta) {
     *next = origin + parameter * delta;
 }
@@ -87,24 +73,29 @@ void acceleration_move(double *next, double origin, double delta, double acceler
     *next = origin + acceleration * delta * delta / 2;
 }
 
+#pragma omp declare simd
+double get_distance(double delta_x, double delta_y) { return sqrt((delta_x * delta_x) + (delta_y * delta_y)); }
+
+#pragma omp declare simd
+double get_force(double *const *stars, int i, int j, double distance) { return (G * stars[i][2] * stars[j][2]) / (distance * distance); }
+
+#pragma omp declare simd
+double get_net_force(double delta, double distance, double force) { return (force * delta) / distance; }
+
 void proceed_epocha(int number_of_stars, double **stars, double **next_stars) {
-#pragma omp parallel for simd schedule(guided)
     for (int i = 0; i < number_of_stars; i++) {
         double net_force_x = 0;
         double net_force_y = 0;
+#pragma omp parallel for simd schedule(guided)
         for (int j = 0; j < number_of_stars; j++) {
+            double delta_x = stars[j][0] - stars[i][0];
+            double delta_y = stars[j][1] - stars[i][1];
 
-            if (i != j) {
-                double delta_x = stars[j][0] - stars[i][0];
-                double delta_y = stars[j][1] - stars[i][1];
+            double distance = get_distance(delta_x, delta_y);
+            double force = get_force(stars, i, j, distance);
 
-                double distance = sqrt((delta_x * delta_x) + (delta_y * delta_y));
-
-                double force = (G * stars[i][2] * stars[j][2]) / (distance * distance);
-
-                net_force_x += (force * delta_x) / distance;
-                net_force_y += (force * delta_y) / distance;
-            }
+            net_force_x += get_net_force(delta_x, distance, force);
+            net_force_y += get_net_force(delta_y, distance, force);
         }
 
         double acceleration_x = net_force_x / stars[i][2];
@@ -211,7 +202,7 @@ int main(int argc, char* argv[]) {
     GifEnd(&gWriter);
 #endif
 
-    cout << totalTime;
+    cout << number_of_stars << " - " << totalTime << "\n";
 
     return 0;
 };
