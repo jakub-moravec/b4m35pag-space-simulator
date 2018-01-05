@@ -54,10 +54,10 @@ double get_force(double *const *stars, int i, int j, double distance) { return (
 double get_net_force(double delta, double distance, double force) { return (force * delta) / distance; }
 
 void proceed_epocha(int number_of_stars, double **stars, double **next_stars) {
+#pragma omp parallel for simd
     for (int i = 0; i < number_of_stars; i++) {
         double net_force_x = 0;
         double net_force_y = 0;
-#pragma omp parallel for simd schedule(guided)
         for (int j = 0; j < number_of_stars; j++) {
             double delta_x = stars[j][0] - stars[i][0];
             double delta_y = stars[j][1] - stars[i][1];

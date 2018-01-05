@@ -6,7 +6,6 @@
 
 DATADIR="$PBS_O_WORKDIR"
 cp $DATADIR/*.cpp $SCRATCHDIR
-cp $DATADIR/*.h $SCRATCHDIR
 cp $DATADIR/input/* $SCRATCHDIR
 cd $SCRATCHDIR || exit 1
 
@@ -18,10 +17,16 @@ icpc -fopenmp -fopt-info-vec -std=c++11 -march=native -Ofast -qopt-report=1 -qop
 echo -e "\nBenchmark started..."
 
 for thread in 1 2 4 8 16 32 
-do 
-    export OMP_NUM_THREADS="$thread"
-    echo "$thread"
-    ./stars $DATADIR/input/1000
+do
+    for input in 100 200 400 800 1000 2000 5000
+    do
+        for run in 1 2 3 4 5
+        do
+            export OMP_NUM_THREADS="$thread"
+            echo "$thread"
+            ./stars $input $SCRATCHDIR/$input.txt
+        done
+     done
 done
 
 echo "Benchmark finished..."
