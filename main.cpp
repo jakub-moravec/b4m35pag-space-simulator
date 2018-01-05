@@ -6,7 +6,7 @@
 
 #include <chrono>
 
-//#define DRAW
+#define DRAW
 enum COLOR_INDEX { RED = 0, GREEN = 1, BLUE = 2, ALPHA = 3 };
 const int background_red = 0;
 const int background_green = 0;
@@ -28,8 +28,8 @@ using namespace std;
 using namespace std::chrono;
 
 const int number_of_parameters = 5;
-const int number_of_iterations = 500;
-const int draw_ratio = 100;
+const int number_of_iterations = 50000;
+const int draw_ratio = 50;
 const double G = 6.67408e-11; // gravitational constant
 const double DELTA_T = 2e5; // time quantum
 
@@ -83,19 +83,22 @@ double get_force(double *const *stars, int i, int j, double distance) { return (
 double get_net_force(double delta, double distance, double force) { return (force * delta) / distance; }
 
 void proceed_epocha(int number_of_stars, double **stars, double **next_stars) {
+#pragma omp parallel for simd schedule(guided)
     for (int i = 0; i < number_of_stars; i++) {
         double net_force_x = 0;
         double net_force_y = 0;
-#pragma omp parallel for simd schedule(guided)
+
         for (int j = 0; j < number_of_stars; j++) {
-            double delta_x = stars[j][0] - stars[i][0];
-            double delta_y = stars[j][1] - stars[i][1];
+            if (i != j) {
+                double delta_x = stars[j][0] - stars[i][0];
+                double delta_y = stars[j][1] - stars[i][1];
 
-            double distance = get_distance(delta_x, delta_y);
-            double force = get_force(stars, i, j, distance);
+                double distance = get_distance(delta_x, delta_y);
+                double force = get_force(stars, i, j, distance);
 
-            net_force_x += get_net_force(delta_x, distance, force);
-            net_force_y += get_net_force(delta_y, distance, force);
+                net_force_x += get_net_force(delta_x, distance, force);
+                net_force_y += get_net_force(delta_y, distance, force);
+            }
         }
 
         double acceleration_x = net_force_x / stars[i][2];
